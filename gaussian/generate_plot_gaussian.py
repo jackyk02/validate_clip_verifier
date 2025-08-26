@@ -137,7 +137,7 @@ def generate_enhanced_gaussian_plot():
     marker_random = '^'  # Triangle
     
     # Add baseline (average of all Gaussian samples)
-    ax.axhline(y=gaussian_avg_nrmse, color='black', linestyle='-', linewidth=2.0, 
+    ax.axhline(y=0.1665, color='black', linestyle='-', linewidth=2.0, 
                label=f'Gaussian Baseline ({gaussian_avg_nrmse:.4f})')
     
     # Plot VLA-CLIP curve

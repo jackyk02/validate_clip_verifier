@@ -25,7 +25,7 @@ def load_data_files():
     print("Loading data files...")
     
     # Load bridge samples
-    with open('bridge_samples.json', 'r') as f:
+    with open('../bridge_samples.json', 'r') as f:
         bridge_data = json.load(f)
     print(f"Loaded {len(bridge_data['samples'])} bridge samples")
     
@@ -100,7 +100,7 @@ def generate_vla_clip_scores():
         
         # Get image path (use _clip.jpg format)
         image_filename = bridge_sample['state']['agent_view_image_file']
-        image_path = os.path.join('bridge_images', image_filename)
+        image_path = os.path.join('../bridge_images', image_filename)
         
         if not os.path.exists(image_path):
             print(f"Warning: Image not found: {image_path}")
@@ -214,7 +214,7 @@ def generate_vla_clip_scores():
 if __name__ == "__main__":
     # Check if required files exist
     required_files = [
-        'bridge_samples.json',
+        '../bridge_samples.json',
         'bridge_openvla_actions_gaussian_20250826_054047.json'
     ]
     

@@ -110,7 +110,7 @@ def generate_augmented_samples_from_batch(batch_actions, num_samples=128):
 
 def load_bridge_data():
     """Load bridge samples"""
-    with open('bridge_samples.json', 'r') as f:
+    with open('../bridge_samples.json', 'r') as f:
         bridge_data = json.load(f)
     return bridge_data
 
@@ -142,7 +142,7 @@ def main():
             # Get OpenVLA processed image path
             image_filename = sample['state']['agent_view_image_file']
             base_name = image_filename.split('_')[0]  # Extract number from "N_clip.jpg"
-            openvla_image_path = f"processed_images/openvla/{base_name}_openvla.jpg"
+            openvla_image_path = f"../processed_images/openvla/{base_name}_openvla.jpg"
             
             if not os.path.exists(openvla_image_path):
                 print(f"Warning: OpenVLA image not found: {openvla_image_path}")
