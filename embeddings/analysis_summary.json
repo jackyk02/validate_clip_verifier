@@ -1,0 +1,13 @@
+{
+  "total_samples_after_filtering": 12071,
+  "nrmse_max_value": 0.399840658973676,
+  "embedding_similarity_mean": 0.9231700897216797,
+  "embedding_similarity_std": 0.04803392291069031,
+  "openvla_nrmse_mean": 0.16287470407279384,
+  "openvla_nrmse_std": 0.0935764031028272,
+  "pearson_correlation": -0.07716184991047477,
+  "pearson_p_value": 2.0769486069734636e-17,
+  "spearman_correlation": -0.07877520538360823,
+  "spearman_p_value": 4.4187794180670266e-18,
+  "significant_correlation": true
+}
