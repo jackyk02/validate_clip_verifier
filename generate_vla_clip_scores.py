@@ -25,17 +25,17 @@ def load_data_files():
     print("Loading data files...")
     
     # Load bridge samples
-    with open('/root/bridge_dataset_extracted/bridge_samples.json', 'r') as f:
+    with open('/root/validate_clip_verifier/bridge_samples.json', 'r') as f:
         bridge_data = json.load(f)
     print(f"Loaded {len(bridge_data['samples'])} bridge samples")
     
     # Load rephrased instructions
-    with open('/root/bridge_dataset_extracted/bridge_instruction_rephrases_20250809_191750.json', 'r') as f:
+    with open('/root/validate_clip_verifier/bridge_instruction_rephrases_20250809_191750.json', 'r') as f:
         rephrase_data = json.load(f)
     print(f"Loaded rephrased instructions for {len(rephrase_data['instructions'])} original instructions")
     
     # Load OpenVLA actions
-    with open('/root/bridge_dataset_extracted/bridge_openvla_actions_20250809_192948.json', 'r') as f:
+    with open('/root/validate_clip_verifier/bridge_openvla_actions_20250809_192948.json', 'r') as f:
         openvla_data = json.load(f)
     print(f"Loaded {len(openvla_data['results'])} OpenVLA action predictions")
     
@@ -98,7 +98,7 @@ def generate_vla_clip_scores():
         
         # Get image path (use _clip.jpg format)
         image_filename = sample['state']['agent_view_image_file']
-        image_path = os.path.join('/root/bridge_dataset_extracted/bridge_images', image_filename)
+        image_path = os.path.join('/root/validate_clip_verifier/bridge_images', image_filename)
         
         if not os.path.exists(image_path):
             print(f"Warning: Image not found: {image_path}")
@@ -215,9 +215,9 @@ def generate_vla_clip_scores():
 if __name__ == "__main__":
     # Check if required files exist
     required_files = [
-        '/root/bridge_dataset_extracted/bridge_samples.json',
-        '/root/bridge_dataset_extracted/bridge_instruction_rephrases_20250809_191750.json',
-        '/root/bridge_dataset_extracted/bridge_openvla_actions_20250809_192948.json'
+        '/root/validate_clip_verifier/bridge_samples.json',
+        '/root/validate_clip_verifier/bridge_instruction_rephrases_20250809_191750.json',
+        '/root/validate_clip_verifier/bridge_openvla_actions_20250809_192948.json'
     ]
     
     missing_files = [f for f in required_files if not os.path.exists(f)]
