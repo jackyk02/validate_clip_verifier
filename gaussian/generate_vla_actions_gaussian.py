@@ -12,6 +12,7 @@ import numpy as np
 import os
 from tqdm import tqdm
 from datetime import datetime
+from token2action import TokenActionConverter
 
 # Define the ranges for NRMSE calculation (from collect.py)
 min_values = np.array([-0.02872725307941437,
@@ -121,6 +122,10 @@ def main():
     samples = bridge_data['samples']
     print(f"Found {len(samples)} bridge samples")
     
+    # Initialize token-action converter
+    print("Initializing token-action converter...")
+    token_converter = TokenActionConverter(n_action_bins=256, unnorm_key="bridge_orig")
+    
     # Configuration
     batch_size = 10  # Number of samples to generate for mean/variance estimation
     num_augmented = 128  # Number of augmented samples per original instruction
@@ -174,6 +179,14 @@ def main():
                     # Calculate NRMSE between ground truth and augmented action
                     nrmse = calculate_nrmse(ground_truth_action, augmented_action)
                     
+                    # Convert augmented action back to output_ids using token converter
+                    try:
+                        output_ids = token_converter.action_to_token(augmented_action)
+                        output_ids_list = output_ids.tolist()
+                    except Exception as e:
+                        print(f"Warning: Could not convert action to tokens for sample {sample_id}, aug {aug_idx}: {e}")
+                        output_ids_list = []
+                    
                     # Create result entry (following same format as generate_vla_actions.py)
                     result_entry = {
                         'sample_id': sample_id,
@@ -184,7 +197,7 @@ def main():
                         'original_instruction': original_instruction,
                         'ground_truth_action': ground_truth_action.tolist(),
                         'generated_action': augmented_action.tolist(),
-                        'output_ids': [],  # Augmented samples don't have output_ids from API
+                        'output_ids': output_ids_list,  # Convert actions to tokens
                         'nrmse': float(nrmse),
                         'image_path': openvla_image_path,
                         'episode_id': sample['state']['episode_id'],

@@ -24,7 +24,7 @@ def load_data_files():
     print(f"Loaded {len(bridge_data['samples'])} bridge samples")
     
     # Load Gaussian-augmented OpenVLA actions
-    with open('bridge_openvla_actions_gaussian_20250826_054047.json', 'r') as f:
+    with open('bridge_openvla_actions_gaussian_20250826_171110.json', 'r') as f:
         gaussian_data = json.load(f)
     print(f"Loaded {len(gaussian_data['results'])} Gaussian-augmented OpenVLA action predictions")
     
@@ -102,11 +102,12 @@ def generate_monkey_verifier_scores_gaussian():
             print(f"Warning: RoboMonkey image not found: {robomonkey_image_path}")
             continue
         
-        # For Gaussian samples, we don't have pre-computed output_ids from the API
-        # We need to check if output_ids exist, otherwise skip this sample
+        # For Gaussian samples, we should have output_ids from the token conversion
+        # If not available, we can skip this sample or use the action directly
         output_ids = gaussian_result.get('output_ids', [])
         if not output_ids:
             print(f"Warning: No output_ids found for Gaussian sample {sample_id}, instruction_index {gaussian_result['instruction_index']}")
+            print("This sample was likely generated without token conversion. Skipping...")
             continue
         
         # Use the output_ids as tokenized action (wrap in list as expected by API)
@@ -166,7 +167,7 @@ def generate_monkey_verifier_scores_gaussian():
             'total_scores_generated': len(results),
             'expected_total': total_expected,
             'source_bridge_file': 'bridge_samples.json',
-            'source_gaussian_file': 'bridge_openvla_actions_gaussian_20250826_054047.json',
+            'source_gaussian_file': 'bridge_openvla_actions_gaussian_20250826_171110.json',
             'verifier_api_endpoint': 'http://127.0.0.1:3100/process',
             'image_format': '_robomonkey.jpg',
             'image_size': [224, 224],
@@ -216,7 +217,7 @@ if __name__ == "__main__":
     
     required_files = [
         '../bridge_samples.json',
-        'bridge_openvla_actions_gaussian_20250826_054047.json'
+        'bridge_openvla_actions_gaussian_20250826_171110.json'
     ]
     
     missing_items = []

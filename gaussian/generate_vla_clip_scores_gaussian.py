@@ -30,7 +30,7 @@ def load_data_files():
     print(f"Loaded {len(bridge_data['samples'])} bridge samples")
     
     # Load Gaussian-augmented OpenVLA actions
-    with open('bridge_openvla_actions_gaussian_20250826_054047.json', 'r') as f:
+    with open('bridge_openvla_actions_gaussian_20250826_171110.json', 'r') as f:
         gaussian_data = json.load(f)
     print(f"Loaded {len(gaussian_data['results'])} Gaussian-augmented OpenVLA action predictions")
     
@@ -171,7 +171,7 @@ def generate_vla_clip_scores():
             'total_scores_generated': len(results),
             'expected_total': total_expected,
             'source_bridge_file': 'bridge_samples.json',
-            'source_gaussian_file': 'bridge_openvla_actions_gaussian_20250826_054047.json',
+            'source_gaussian_file': 'bridge_openvla_actions_gaussian_20250826_171110.json',
             'vla_clip_model_path': model_path,
             'use_transformer': True,
             'history_length': 10,
@@ -215,7 +215,7 @@ if __name__ == "__main__":
     # Check if required files exist
     required_files = [
         '../bridge_samples.json',
-        'bridge_openvla_actions_gaussian_20250826_054047.json'
+        'bridge_openvla_actions_gaussian_20250826_171110.json'
     ]
     
     missing_files = [f for f in required_files if not os.path.exists(f)]
