@@ -35,6 +35,69 @@ plt.rcParams.update({
     'text.usetex': False,
 })
 
+def generate_augmented_samples_from_batch(batch_actions, num_samples=100, verbose=False):
+    """
+    Generate augmented samples based on the mean and variance of a batch of actions.
+    
+    Args:
+        batch_actions: NumPy array of shape (batch_size, 7) containing a batch of actions.
+        num_samples: Number of augmented samples to generate.
+        verbose: Whether to print debug information.
+        
+    Returns:
+        NumPy array of shape (num_samples, 7) containing augmented samples.
+    """
+    if verbose:
+        print(f"\nCalculating mean and variance from batch of {len(batch_actions)} actions...")
+    
+    # Calculate mean and variance for each dimension
+    mean_values = np.mean(batch_actions, axis=0)
+    var_values = np.var(batch_actions, axis=0)
+    
+    if verbose:
+        print("Mean values per dimension:", mean_values)
+        print("Variance values per dimension:", var_values)
+    
+    # Define valid ranges for the action dimensions
+    min_values = np.array([-0.02872725307941437,
+                         -0.04170349963009357,
+                         -0.026093858778476715,
+                         -0.08092105075716972,
+                         -0.09288699507713317,
+                         -0.20718276381492615,
+                         0.0])
+    max_values = np.array([0.028309678435325586,
+                         0.040855254605412394,
+                         0.040161586627364146,
+                         0.08192047759890528,
+                         0.07792850524187081,
+                         0.20382574498653397,
+                         1.0])
+    
+    # Initialize output array to hold augmented samples
+    augmented_array = np.zeros((num_samples, 7))
+    
+    # Generate num_samples augmented samples
+    for i in range(num_samples):
+        # Generate values using the calculated mean and variance
+        # For dimensions 0-5 (continuous values)
+        augmented_action = np.random.normal(mean_values, np.sqrt(var_values), size=7)
+        
+        # For the 7th dimension (binary), use probability based on mean
+        p_gripper = mean_values[-1]  # Probability of gripper being 1
+        augmented_action[-1] = np.random.choice([0.0, 1.0], p=[1-p_gripper, p_gripper])
+        
+        # Clamp values to valid range for first six dimensions
+        augmented_action[:-1] = np.clip(augmented_action[:-1], min_values[:-1], max_values[:-1])
+        
+        # Store the augmented action
+        augmented_array[i] = augmented_action
+    
+    if verbose:
+        print(f"Generated {num_samples} augmented samples based on batch statistics")
+    
+    return augmented_array
+
 def load_vla_clip_data():
     """Load VLA-CLIP scores and organize by sample"""
     print("Loading VLA-CLIP (Greedy Decoding) data...")
@@ -279,6 +342,81 @@ def calculate_oracle_repeated_rephrase_only(repeated_samples, num_rephrases, sam
     
     return np.mean(sample_nrmse_values) if sample_nrmse_values else None
 
+def calculate_oracle_repeated_rephrase_with_augmentation(repeated_samples, num_rephrases, samples_per_rephrase):
+    """
+    Oracle with rephrased instructions using Gaussian augmentation to generate more samples.
+    
+    Args:
+        repeated_samples: Samples from repeated sampling data
+        num_rephrases: Number of rephrase instructions to consider
+        samples_per_rephrase: Number of samples to generate per rephrase (using augmentation if > available)
+    """
+    sample_nrmse_values = []
+    
+    for sample_id, results in repeated_samples.items():
+        # Group by instruction_index
+        instruction_groups = defaultdict(list)
+        for r in results:
+            instruction_groups[r['instruction_index']].append(r)
+        
+        candidate_pool = []
+        
+        # Get rephrase instruction indices (exclude original at index 0)
+        rephrase_indices = sorted([idx for idx in instruction_groups.keys() if idx > 0])
+        
+        if len(rephrase_indices) < num_rephrases:
+            continue
+            
+        # Use the first num_rephrases rephrase instructions
+        for i in range(num_rephrases):
+            instr_idx = rephrase_indices[i]
+            repeats = instruction_groups[instr_idx]
+            
+            if samples_per_rephrase <= len(repeats):
+                # Use existing samples if we have enough
+                sampled_repeats = repeats[:samples_per_rephrase]
+                candidate_pool.extend(sampled_repeats)
+            else:
+                # Use all available samples plus augmented ones
+                available_actions = []
+                for repeat in repeats:
+                    available_actions.append(repeat['predicted_action'])
+                
+                # Convert to numpy array for augmentation
+                batch_actions = np.array(available_actions)
+                
+                # Generate augmented samples
+                augmented_samples_needed = samples_per_rephrase - len(repeats)
+                augmented_actions = generate_augmented_samples_from_batch(batch_actions, augmented_samples_needed)
+                
+                # Add existing samples to candidate pool
+                candidate_pool.extend(repeats)
+                
+                # Create synthetic results for augmented samples
+                # We need to calculate NRMSE for the augmented actions
+                ground_truth_action = np.array(repeats[0]['ground_truth_action'])
+                
+                for aug_action in augmented_actions:
+                    # Calculate NRMSE for the augmented action
+                    diff = aug_action - ground_truth_action
+                    nrmse = np.sqrt(np.mean(diff**2)) / (np.max(ground_truth_action) - np.min(ground_truth_action) + 1e-8)
+                    
+                    # Create a synthetic result entry
+                    synthetic_result = {
+                        'predicted_action': aug_action.tolist(),
+                        'ground_truth_action': ground_truth_action.tolist(),
+                        'openvla_nrmse': nrmse,
+                        'is_augmented': True
+                    }
+                    candidate_pool.append(synthetic_result)
+        
+        # Oracle selects the SINGLE best action from the entire candidate pool
+        if candidate_pool:
+            best_instruction = min(candidate_pool, key=lambda x: x['openvla_nrmse'])
+            sample_nrmse_values.append(best_instruction['openvla_nrmse'])
+    
+    return np.mean(sample_nrmse_values) if sample_nrmse_values else None
+
 def generate_actions_per_instruction_plot():
     """Generate the plot showing oracle performance vs samples per rephrase for multiple rephrase counts"""
     
@@ -291,7 +429,7 @@ def generate_actions_per_instruction_plot():
     
     # Define the number of rephrases to test and samples per rephrase
     num_rephrases_list = [1, 2, 4, 8, 16, 32, 64]  # 7 different rephrase counts
-    samples_per_rephrase_list = [1, 2, 4]  # Test with 1, 2, and 4 samples per rephrase
+    samples_per_rephrase_list = [1, 2, 4, 8, 16, 32, 64, 128]  # Extended range using Gaussian augmentation
     
     print("Calculating oracle NRMSE for different rephrase counts and sampling strategies...")
     
@@ -322,11 +460,18 @@ def generate_actions_per_instruction_plot():
                 nrmse = repeated_nrmse
                 print(f"  {samples_per_rephrase} samples per rephrase: {nrmse:.4f} NRMSE (Greedy: {greedy_nrmse:.4f})")
             else:
-                # Use repeated sampling for all other cases
-                nrmse = calculate_oracle_repeated_rephrase_only(repeated_samples, num_rephrases, samples_per_rephrase)
+                # Use augmentation-enabled function for all cases
+                if samples_per_rephrase <= 4:
+                    # Use existing samples without augmentation for small counts
+                    nrmse = calculate_oracle_repeated_rephrase_only(repeated_samples, num_rephrases, samples_per_rephrase)
+                else:
+                    # Use augmentation for larger sample counts
+                    nrmse = calculate_oracle_repeated_rephrase_with_augmentation(repeated_samples, num_rephrases, samples_per_rephrase)
+                
                 if nrmse is not None:
                     improvement = ((original_avg_nrmse - nrmse) / original_avg_nrmse * 100)
-                    print(f"  {samples_per_rephrase} samples per rephrase: {nrmse:.4f} NRMSE ({improvement:.1f}% improvement)")
+                    augmentation_note = " (with augmentation)" if samples_per_rephrase > 4 else ""
+                    print(f"  {samples_per_rephrase} samples per rephrase: {nrmse:.4f} NRMSE ({improvement:.1f}% improvement){augmentation_note}")
             
             if nrmse is not None:
                 samples_x.append(samples_per_rephrase)
@@ -351,8 +496,9 @@ def generate_actions_per_instruction_plot():
                label='Original Instruction Baseline')
     
     # Axis labels and formatting
-    ax.set_xlabel("Number of Repeated Samples per Rephrase")
-    ax.set_ylabel("Action Error (Average NRMSE)")
+    ax.set_xlabel("Number of Generated Actions per Rephrase")
+    ax.set_ylabel("Oracle Action Error (Average NRMSE)")
+    ax.set_xscale('log', base=2)
     ax.set_xticks(samples_per_rephrase_list)
     ax.set_xticklabels([str(t) for t in samples_per_rephrase_list])
     
@@ -405,8 +551,16 @@ def generate_actions_per_instruction_plot():
                 print(f"  {result['samples_per_rephrase']} samples: {result['oracle_nrmse']:.4f} NRMSE ({result['improvement_percent']:.1f}% improvement)")
             print(f"  Best: {best_result['oracle_nrmse']:.4f} NRMSE with {best_result['samples_per_rephrase']} samples per rephrase")
     
-    # Analyze the effect of increasing rephrases (at 4 samples per rephrase)
-    print(f"\nEffect of increasing number of rephrases (at 4 samples per rephrase):")
+    # Analyze the effect of increasing rephrases (at 128 samples per rephrase with augmentation)
+    print(f"\nEffect of increasing number of rephrases (at 128 samples per rephrase with augmentation):")
+    high_sample_results = [r for r in all_results if r['samples_per_rephrase'] == 128]
+    high_sample_results.sort(key=lambda x: x['num_rephrases'])
+    
+    for result in high_sample_results:
+        print(f"  {result['num_rephrases']:2d} rephrases: {result['oracle_nrmse']:.4f} NRMSE ({result['improvement_percent']:.1f}% improvement)")
+    
+    # Also analyze at 4 samples per rephrase (without augmentation)
+    print(f"\nEffect of increasing number of rephrases (at 4 samples per rephrase, no augmentation):")
     four_sample_results = [r for r in all_results if r['samples_per_rephrase'] == 4]
     four_sample_results.sort(key=lambda x: x['num_rephrases'])
     
