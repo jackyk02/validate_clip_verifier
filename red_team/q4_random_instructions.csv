@@ -1,0 +1,101 @@
+sample_id,original_instruction,red_team_instruction
+0,put lid on pot or pan,lay the top over the pot or skillet
+1,put the green towel in the machine,place the green towel into the apparatus
+2,Move the green block  to the left side of the table,move the green block to the table's leftmost section
+3,Pick the green box and place it ontop the red arch,snatch the green box and lay it on the red arch
+4,can putto the bottom left part of the table,deposit it at the leftmost bottom section of the table
+5,Pick up the pot and place it on the blue cloth,pick up the pot and rest it on the blue textile
+6,put potato in pot cardboard fence,lay the potato in the cardboard casing of the pot
+7,unfold the cloth from the middle to right,lay the textile out from the middle to the right
+8,fold the cloth from the bottom right to the top left,fold the textile from the lower right to the upper left
+9,sweep into pile,gather into a stack
+10,put big spoon from basket to tray,deposit the big spoon from the basket onto the tray
+11,put sushi on plate,arrange sushi onto the serving plate
+12,put lid on pot,cover the pot with the top
+13,move the silver pot to the top left side of the burner,position the silver pot to the burner’s leftmost top side
+14,Place the pot on top of the towel.,situate the pot on the drying blanket
+15,wipe pot with sponge,wipe down the pot with a sponge
+16,put carrot on plate,set the carrot on the kitchen dish
+17,open the drawer,pull the drawer group
+18,flip pot upright in sink,turn the pot to face upwards in the sink
+19,put broccoli in pot,add the vegetable to the pot
+20,Place the blue brush below the pot.,place the blue brush below the vessel
+21,Moved nothing,no changes to positions
+22,take the sweet potato and put it on the lower right burner,fetch the sweet potato and lay it on the lower right heating element
+23,moved blue brush to the right side of silver pot,shift the blue brush to the right edge of the silver container
+24,try to moving the bag,try to move the briefcase
+25,remove blue figure from top of the cloth and placed on  the table,pick up the blue shape from the cloth and position it on the table
+26,pick up violet Allen key,grasp the purple allen key
+27,move the white object to the upper side of the left burner,shift the white object to the upper region of the left burner
+28,put the cylinder on top of the blue cube,put the cylinder on the cerulean block
+29,end effector reaching salmon,robotic hand aiming at the salmon
+30,grab the white basket,reach for the white basket
+31,take spoon out of bowl sink,take the spoon from out of the sink bowl
+32,take the yellow things and put it in the left of drower,take hold of the yellow materials and deposit them on the left section of the drawer
+33,turn lever vertical to front,position the lever so it is standing up and facing forward
+34,unfold the cloth from top to bottom,open the material from the uppermost edge to the bottom
+35,put the circular ring in the cylinder,slide the circular band in the cylinder
+36,move a yellow brush to the right lower side of the stove,move the yellow brush to the stove's bottom right-hand corner
+37,pick up pan from stove,pick the pot up from the stove
+38,move the sushi to the lower middle side of the table,place the sushi in the lower midsection on the table
+39,open large4fbox flaps,open the edges of the large4fbox flaps
+40,Move the spoon to the front left corner of the table,move the spoon to the table's front leftmost side
+41,fold the cloth from top right to bottom left,fold the material starting at the top-right and finishing at the bottom-left
+42,move the red and white object to the lower right burner,shift the red and white article to the bottom right burner
+43,put potato on plate,lay the spud on the plate
+44,"Slide pot to back of table, to right of can.","transport the pot to the table's far edge, right of the can"
+45,Slide the sushi to the top right of the stovetop above the purple rag.,"relocate the sushi to the top-right corner on the stove, above the purple textile"
+46,Place the pot to the lower right corner of the table,move the pot to the bottom-right on the table
+47,pick up the green arch on top of the white cylinder and blue cube and put it on the table,take hold of the green arch from the white cylinder and blue cube and position it on the table
+48,open fridge,access the cooling compartment
+49,close microwave,shut the microwave flap
+50,Move the purple cloth to the upper left corner of the table,move the violet cloth to the top left of the table
+51,Mention the final position of the object moved left,pinpoint the end position of the thing moved to the left
+52,put the green thing in the washing machine,load the green object in the laundry machine
+53,put the yellow cube on top of the blue cube,position the yellow square above the blue block
+54,turn the yellow spoon counterclockwise,move the yellow spoon in a leftward manner
+55,put the red rectangle on the top of blue arch,put the red rectangle on the blue arch's utmost extreme utmost extreme summit
+56,put pear in bowl,place the fruit in the serving bowl
+57,Place the red spoon in the silver pot.,drop the red spoon in the metallic pan
+58,put pepper in pan,deposit some pepper inside the frying pan
+59,move faucet front to left,turn the faucet from a forward direction to the left
+60,put the block on the right side,move the rectangle to the right-hand side
+61,Moved the half carrot from the right side to the left side of the cabinet,relocate the carrot portion from the right to the left side of the cabinet
+62,move the red object to the top left side of the cloth,move the red item to the top-left edge of the cloth
+63,close fridge,shut the cold compartment
+64,close the drawer,slide the storage unit inward
+65,Move the red object to the upper left side of the table,relocate the red object to the top left section of the table
+66,put banana in pot or pan,place the banana into the cooking receptacle
+67,Place the pot on top of the blue towel,position the pot tidily on the blue towel
+68,fold the cloth from top left to the bottom right,fold the textile from the upper left corner to the lower right corner
+69,Put the green vegetable next to the red spoon.,place the green culinary item next to the red spoon
+70,close low fridge,shut the door of the lower fridge
+71,moved the silver pot to the bottom left of the stove,relocate the silver pot to the stove's left bottom-hand side
+72,put the cover to the silver bowl,attach the cover on the shiny bowl
+73,fold the cloth from bottom left to top right,turn the cloth from the bottom left to the top right side
+74,unfold the cloth,lay the cloth out fully
+75,move metal bowl to just below sushi,transfer the metal basin to just below the sushi
+76,Move the spatula and place it on the edge of the table.,pick up the spatula and put it on the table's edge
+77,moved the Blue nanies on the table,moved the blue gear on the table
+78,Place the knife between the bowl and the blue towel,lay the knife in the division that partitions the bowl and the azure towel
+79,moving white silver  pot,adjust the white and silver jar
+80,put bowl on plate cardboard fence,rest the bowl on the cardboard boundary plate
+81,Put the silver pot on the upper right burner.,place the metallic pot on the upper right stove
+82,put potato on plate and strawberry in pot or pan in sink,place the potato onto a dish and the strawberry inside a saucepan or skillet in the sink
+83,unfold the cloth from top left to bottom right,expand the cloth from the top left diagonally to the bottom right
+84,Put the green object above on the blue cloth,arrange the green object on the blue layer
+85,move the pot onto the yellow napkin,move the braising pot onto the yellow napkin
+86,move the blue cloth to the lower left side of the table,shift the blue material to the table's left bottom area
+87,put the white and black object on the blue cloth,lay the object with a black and white scheme on the blue material
+88,moved the red chili to the right of the stove,transferred the red pepper to the stove's right side
+89,Move the yellow cloth to the back left corner of the table.,transport the yellow cloth to the table's far left back corner
+90,Put the red cube top of the tray angle,set the red cube on the tray's point
+91,take the banana out of the drawer and put it on the right side of the table,extract the banana from the drawer and position it on the right side of the table
+92,moved the silver pot to the upper left of table,transfer the silver pot to the table's upper left side
+93,Place the mushroom inside of the metal pot by the tin cans,put the mushroom in the metal container by the tin cans
+94,open microwave,open the microwave interchange
+95,put blueberries on plate sink,place the blueberries onto the dish by the sink
+96,Place the strawberry in the pot,position the berry in the pot
+97,cover the box,overlay the container
+98,Put the spatula onto the towel.,lay the spatula flat on the towel
+99,move the spoon into top right side of the table,set the spoon at the upper right of the table
