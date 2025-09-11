@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Generate OpenVLA actions for each sample's instruction and rephrases,
-recording their NRMSE values as a list for each sample.
+Generate OpenVLA output_ids for each sample's instruction and rephrases,
+recording their output_ids as a list for each sample.
 The first value in the list is for the original instruction, followed by rephrases.
 """
 
@@ -13,35 +13,9 @@ import argparse
 from tqdm import tqdm
 from datetime import datetime
 
-# Define the ranges for NRMSE calculation (from generate_vla_actions.py)
-min_values = np.array([-0.02872725307941437,
-          -0.04170349963009357,
-          -0.026093858778476715,
-          -0.08092105075716972,
-          -0.09288699507713317,
-          -0.20718276381492615,
-          0.0])
-max_values = np.array([0.028309678435325586,
-          0.040855254605412394,
-          0.040161586627364146,
-          0.08192047759890528,
-          0.07792850524187081,
-          0.20382574498653397,
-          1.0])
-ranges = max_values - min_values
-
-def calculate_nrmse(action0, action1):
-    """
-    Calculate normalized root mean squared error between two actions
-    """
-    # Normalize the difference by the range
-    normalized_diff = (action0 - action1) / ranges
-    nrmse = np.sqrt(np.mean(normalized_diff**2))
-    return nrmse
-
 def get_batch_actions(instructions, image_paths, temperature=0.0):
     """
-    Get batch actions for multiple instructions using OpenVLA.
+    Get batch output_ids for multiple instructions using OpenVLA.
     
     Args:
         instructions: List of instruction strings
@@ -70,25 +44,19 @@ def get_batch_actions(instructions, image_paths, temperature=0.0):
     return np.array(result["output_ids"]), np.array(result["actions"])
 
 def load_data():
-    """Load augmented instructions and ground truth actions"""
+    """Load augmented instructions"""
     # Load augmented instructions (with rephrases)
     with open('augmented_instructions.json', 'r') as f:
         augmented_data = json.load(f)
     
-    # Load ground truth actions
-    print("Loading ground truth actions (this may take a moment due to large file size)...")
-    with open('unique_simple_groundtruth.json', 'r') as f:
-        groundtruth_data = json.load(f)
-    
-    return augmented_data, groundtruth_data
+    return augmented_data
 
-def process_batch(batch_samples, groundtruth_sample_map):
+def process_batch(batch_samples):
     """
     Process a batch of samples together for efficiency by making a single API call.
     
     Args:
         batch_samples: List of augmented samples to process
-        groundtruth_sample_map: Mapping from sample_id to ground truth data
     
     Returns:
         List of result entries for the batch
@@ -103,14 +71,6 @@ def process_batch(batch_samples, groundtruth_sample_map):
         original_instruction = aug_sample['instruction']
         rephrases = aug_sample['rephrases']
         
-        # Find corresponding ground truth sample
-        if sample_id not in groundtruth_sample_map:
-            print(f"Warning: No ground truth sample found for sample_id {sample_id}")
-            continue
-        
-        groundtruth_sample = groundtruth_sample_map[sample_id]
-        ground_truth_action = np.array(groundtruth_sample['current_ground_truth_action'])
-        
         # Get image path
         image_filename = f"{sample_id}.jpg"
         image_path = f"bridge_images_openvla/{image_filename}"
@@ -124,7 +84,6 @@ def process_batch(batch_samples, groundtruth_sample_map):
             'sample_id': sample_id,
             'original_instruction': original_instruction,
             'rephrases': rephrases,
-            'ground_truth_action': ground_truth_action,
             'image_path': image_path
         })
     
@@ -157,11 +116,9 @@ def process_batch(batch_samples, groundtruth_sample_map):
         for result_idx, (sample_idx, instr_idx) in enumerate(instruction_to_sample_mapping):
             if sample_idx not in sample_results:
                 sample_results[sample_idx] = {
-                    'generated_actions': [],
                     'instruction_indices': []
                 }
             
-            sample_results[sample_idx]['generated_actions'].append(generated_actions[result_idx])
             sample_results[sample_idx]['instruction_indices'].append(instr_idx)
         
         # Process results for each sample
@@ -176,21 +133,25 @@ def process_batch(batch_samples, groundtruth_sample_map):
             sorted_indices = sorted(range(len(sample_result['instruction_indices'])), 
                                   key=lambda i: sample_result['instruction_indices'][i])
             
-            # Calculate NRMSE values
-            nrmse_list = []
+            # Collect output_ids in order
+            output_ids_list = []
             
             for sort_idx in sorted_indices:
-                generated_action = sample_result['generated_actions'][sort_idx]
+                result_idx = None
+                # Find the corresponding result index for this sorted index
+                for r_idx, (s_idx, i_idx) in enumerate(instruction_to_sample_mapping):
+                    if s_idx == sample_idx and sample_result['instruction_indices'][sort_idx] == i_idx:
+                        result_idx = r_idx
+                        break
                 
-                # Calculate NRMSE
-                nrmse = calculate_nrmse(meta['ground_truth_action'], generated_action)
-                nrmse_list.append(float(nrmse))
+                if result_idx is not None:
+                    output_ids_list.append(output_ids[result_idx].tolist())
             
             # Create result entry for this sample
             result_entry = {
                 'sample_id': meta['sample_id'],
                 'original_instruction': meta['original_instruction'],
-                'nrmse_list': nrmse_list  # First is original, rest are rephrases
+                'output_ids_list': output_ids_list  # First is original, rest are rephrases
             }
             
             batch_results.append(result_entry)
@@ -210,16 +171,10 @@ def main():
                         help='GPU ID (0-7) to determine which data partition to process')
     args = parser.parse_args()
     
-    print("Loading augmented instructions and ground truth dataset...")
-    augmented_data, groundtruth_data = load_data()
-    
-    groundtruth_samples = groundtruth_data['extracted_samples']
-    
-    # Create a mapping from sample_id to ground truth sample for quick lookup
-    groundtruth_sample_map = {sample['sample_id']: sample for sample in groundtruth_samples}
+    print("Loading augmented instructions dataset...")
+    augmented_data = load_data()
     
     print(f"Found {len(augmented_data)} samples with instructions and rephrases")
-    print(f"Found {len(groundtruth_samples)} ground truth samples with actions")
     
     # Validate GPU ID
     if args.gpu_id < 0 or args.gpu_id > 7:
@@ -254,7 +209,7 @@ def main():
             batch_samples = gpu_samples[batch_start:batch_end]
             
             # Process this batch of samples
-            batch_results = process_batch(batch_samples, groundtruth_sample_map)
+            batch_results = process_batch(batch_samples)
             results.extend(batch_results)
             
             pbar.update(1)
@@ -263,13 +218,13 @@ def main():
     
     # Save results to JSON file
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_file = f"instruction_actions_nrmse_gpu{args.gpu_id}_{timestamp}.json"
+    output_file = f"instruction_output_ids_gpu{args.gpu_id}_{timestamp}.json"
     
     # Calculate summary statistics
-    all_original_nrmse = [r['nrmse_list'][0] for r in results]
-    all_rephrase_nrmse = []
+    all_original_output_ids = [r['output_ids_list'][0] for r in results]
+    all_rephrase_output_ids = []
     for r in results:
-        all_rephrase_nrmse.extend(r['nrmse_list'][1:])  # Skip first (original)
+        all_rephrase_output_ids.extend(r['output_ids_list'][1:])  # Skip first (original)
     
     # Prepare final data structure
     final_data = {
@@ -277,7 +232,7 @@ def main():
             'timestamp': timestamp,
             'gpu_id': args.gpu_id,
             'total_samples': len(results),
-            'total_datapoints': sum(len(r['nrmse_list']) for r in results),
+            'total_datapoints': sum(len(r['output_ids_list']) for r in results),
             'expected_datapoints': gpu_expected_datapoints,
             'sample_range': {
                 'start': start_sample,
@@ -285,20 +240,15 @@ def main():
                 'count': end_sample - start_sample
             },
             'source_augmented_file': 'augmented_instructions.json',
-            'source_groundtruth_file': 'unique_simple_groundtruth.json',
             'model': 'OpenVLA',
             'temperature': 0,
             'batch_size': args.batch_size,
             'summary_stats': {
-                'original_nrmse': {
-                    'mean': float(np.mean(all_original_nrmse)),
-                    'std': float(np.std(all_original_nrmse)),
-                    'count': len(all_original_nrmse)
+                'original_output_ids': {
+                    'count': len(all_original_output_ids)
                 },
-                'rephrase_nrmse': {
-                    'mean': float(np.mean(all_rephrase_nrmse)),
-                    'std': float(np.std(all_rephrase_nrmse)),
-                    'count': len(all_rephrase_nrmse)
+                'rephrase_output_ids': {
+                    'count': len(all_rephrase_output_ids)
                 }
             }
         },
@@ -319,19 +269,18 @@ def main():
     print(f"GPU ID: {args.gpu_id}")
     print(f"Sample range: {start_sample} to {end_sample-1} ({end_sample - start_sample} samples)")
     print(f"Total samples processed: {len(results)}")
-    print(f"Total datapoints: {sum(len(r['nrmse_list']) for r in results)}")
-    print(f"Original instruction datapoints: {len(all_original_nrmse)}")
-    print(f"Rephrased instruction datapoints: {len(all_rephrase_nrmse)}")
-    print(f"Original NRMSE - Mean: {np.mean(all_original_nrmse):.4f}, Std: {np.std(all_original_nrmse):.4f}")
-    print(f"Rephrase NRMSE - Mean: {np.mean(all_rephrase_nrmse):.4f}, Std: {np.std(all_rephrase_nrmse):.4f}")
+    print(f"Total datapoints: {sum(len(r['output_ids_list']) for r in results)}")
+    print(f"Original instruction datapoints: {len(all_original_output_ids)}")
+    print(f"Rephrased instruction datapoints: {len(all_rephrase_output_ids)}")
     print(f"Results saved to: {output_file}")
     
     # Show example of first few samples
     print(f"\nExample results (first 3 samples):")
     for i, result in enumerate(results[:3]):
-        print(f"Sample {result['sample_id']}: NRMSE list = {[f'{x:.4f}' for x in result['nrmse_list']]}")
+        print(f"Sample {result['sample_id']}: {len(result['output_ids_list'])} output_ids lists")
         print(f"  Original: '{result['original_instruction']}'")
-        print(f"  {len(result['nrmse_list']) - 1} rephrases")
+        print(f"  {len(result['output_ids_list']) - 1} rephrases")
+        print(f"  First output_ids shape: {len(result['output_ids_list'][0]) if result['output_ids_list'] else 'N/A'}")
 
 if __name__ == "__main__":
     main()
