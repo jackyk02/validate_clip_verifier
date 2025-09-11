@@ -39,27 +39,24 @@ def calculate_nrmse(action0, action1):
     nrmse = np.sqrt(np.mean(normalized_diff**2))
     return nrmse
 
-def get_batch_actions(instructions, image_path, temperature=0.0):
+def get_batch_actions(instructions, image_paths, temperature=0.0):
     """
     Get batch actions for multiple instructions using OpenVLA.
     
     Args:
-        instructions: List of instruction strings or a single instruction string
-        image_path: Path to the image file
+        instructions: List of instruction strings
+        image_paths: List of image file paths (one per instruction)
         temperature: Temperature for sampling
     
     Returns:
         Tuple of (output_ids, actions) as numpy arrays
     """
-    image_path = os.path.abspath(image_path)
-    
-    # Handle both single instruction and list of instructions
-    if isinstance(instructions, str):
-        instructions = [instructions]
+    # Convert to absolute paths
+    image_paths = [os.path.abspath(path) for path in image_paths]
     
     payload = {
         "instructions": instructions,
-        "image_path": image_path,
+        "image_paths": image_paths,
         "temperature": temperature
     }
 
@@ -87,7 +84,7 @@ def load_data():
 
 def process_batch(batch_samples, groundtruth_sample_map):
     """
-    Process a batch of samples together for efficiency.
+    Process a batch of samples together for efficiency by making a single API call.
     
     Args:
         batch_samples: List of augmented samples to process
@@ -98,8 +95,8 @@ def process_batch(batch_samples, groundtruth_sample_map):
     """
     batch_results = []
     
-    # Process each sample in the batch
-    batch_metadata = []
+    # Collect metadata for valid samples
+    valid_samples_metadata = []
     
     for aug_sample in batch_samples:
         sample_id = aug_sample['sample_id']
@@ -123,7 +120,7 @@ def process_batch(batch_samples, groundtruth_sample_map):
             continue
         
         # Store metadata for processing
-        batch_metadata.append({
+        valid_samples_metadata.append({
             'sample_id': sample_id,
             'original_instruction': original_instruction,
             'rephrases': rephrases,
@@ -131,26 +128,68 @@ def process_batch(batch_samples, groundtruth_sample_map):
             'image_path': image_path
         })
     
-    if not batch_metadata:
+    if not valid_samples_metadata:
         return batch_results
     
-    # Process each sample with batch API calls
-    for meta in batch_metadata:
-        try:
-            sample_instructions = [meta['original_instruction']] + meta['rephrases']
+    # Collect all instructions and corresponding image paths for single batch API call
+    all_instructions = []
+    all_image_paths = []
+    instruction_to_sample_mapping = []  # Maps instruction index to (sample_idx, instruction_idx_within_sample)
+    
+    for sample_idx, meta in enumerate(valid_samples_metadata):
+        sample_instructions = [meta['original_instruction']] + meta['rephrases']
+        
+        for instr_idx, instruction in enumerate(sample_instructions):
+            all_instructions.append(instruction)
+            all_image_paths.append(meta['image_path'])
+            instruction_to_sample_mapping.append((sample_idx, instr_idx))
+    
+    try:
+        # Make single batch API call for all instructions across all samples
+        output_ids, generated_actions = get_batch_actions(
+            instructions=all_instructions,
+            image_paths=all_image_paths,
+            temperature=0.0
+        )
+        
+        # Group results back by sample
+        sample_results = {}
+        for result_idx, (sample_idx, instr_idx) in enumerate(instruction_to_sample_mapping):
+            if sample_idx not in sample_results:
+                sample_results[sample_idx] = {
+                    'instructions': [],
+                    'generated_actions': [],
+                    'output_ids': [],
+                    'instruction_indices': []
+                }
             
-            # Get actions for all instructions of this sample at once
-            output_ids, generated_actions = get_batch_actions(
-                instructions=sample_instructions,
-                image_path=meta['image_path'],
-                temperature=0.0
-            )
+            sample_results[sample_idx]['instructions'].append(all_instructions[result_idx])
+            sample_results[sample_idx]['generated_actions'].append(generated_actions[result_idx])
+            sample_results[sample_idx]['output_ids'].append(output_ids[result_idx])
+            sample_results[sample_idx]['instruction_indices'].append(instr_idx)
+        
+        # Process results for each sample
+        for sample_idx, meta in enumerate(valid_samples_metadata):
+            if sample_idx not in sample_results:
+                print(f"Warning: No results found for sample {meta['sample_id']}")
+                continue
             
-            # Calculate NRMSE for each instruction
+            sample_result = sample_results[sample_idx]
+            
+            # Sort by instruction index to maintain order (original first, then rephrases)
+            sorted_indices = sorted(range(len(sample_result['instruction_indices'])), 
+                                  key=lambda i: sample_result['instruction_indices'][i])
+            
+            # Calculate NRMSE and create action details
             nrmse_list = []
             action_details = []
             
-            for instr_idx, (instruction, generated_action, output_id) in enumerate(zip(sample_instructions, generated_actions, output_ids)):
+            for sort_idx in sorted_indices:
+                instruction = sample_result['instructions'][sort_idx]
+                generated_action = sample_result['generated_actions'][sort_idx]
+                output_id = sample_result['output_ids'][sort_idx]
+                instr_idx = sample_result['instruction_indices'][sort_idx]
+                
                 # Calculate NRMSE
                 nrmse = calculate_nrmse(meta['ground_truth_action'], generated_action)
                 nrmse_list.append(float(nrmse))
@@ -177,9 +216,9 @@ def process_batch(batch_samples, groundtruth_sample_map):
             
             batch_results.append(result_entry)
             
-        except Exception as e:
-            print(f"Error processing sample {meta['sample_id']}: {e}")
-            continue
+    except Exception as e:
+        print(f"Error processing batch: {e}")
+        return batch_results
     
     return batch_results
 
@@ -187,7 +226,7 @@ def main():
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='Generate OpenVLA actions for instructions and rephrases')
     parser.add_argument('--batch-size', type=int, default=4,
-                        help='Number of samples to process together (default: 4)')
+                        help='Number of samples to process together in a single API call (default: 4)')
     args = parser.parse_args()
     
     print("Loading augmented instructions and ground truth dataset...")
