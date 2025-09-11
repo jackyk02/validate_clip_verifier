@@ -205,7 +205,7 @@ def main():
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='Generate OpenVLA actions for instructions and rephrases')
     parser.add_argument('--batch-size', type=int, default=100,
-                        help='Number of samples to process together in a single API call (default: 4)')
+                        help='Number of samples to process together in a single API call (default: 100)')
     parser.add_argument('--gpu-id', type=int, required=True,
                         help='GPU ID (0-7) to determine which data partition to process')
     args = parser.parse_args()
@@ -226,34 +226,16 @@ def main():
         raise ValueError("GPU ID must be between 0 and 7")
     
     # Calculate data partitioning for this GPU
-    total_datapoints = sum(1 + len(item['rephrases']) for item in augmented_data)
-    datapoints_per_gpu = 180000
-    start_datapoint = args.gpu_id * datapoints_per_gpu
-    end_datapoint = min(start_datapoint + datapoints_per_gpu, total_datapoints)
+    total_samples = len(augmented_data)
+    samples_per_gpu = 180000
+    start_sample = args.gpu_id * samples_per_gpu
+    end_sample = min(start_sample + samples_per_gpu, total_samples)
     
-    print(f"Total datapoints in dataset: {total_datapoints}")
-    print(f"GPU {args.gpu_id} processing datapoints {start_datapoint} to {end_datapoint-1} ({end_datapoint - start_datapoint} datapoints)")
+    print(f"Total samples in dataset: {total_samples}")
+    print(f"GPU {args.gpu_id} processing samples {start_sample} to {end_sample-1} ({end_sample - start_sample} samples)")
     
-    # Partition the data for this GPU
-    current_datapoint = 0
-    gpu_samples = []
-    
-    for sample in augmented_data:
-        sample_datapoints = 1 + len(sample['rephrases'])  # Original + rephrases
-        
-        # Check if this sample's datapoints overlap with our GPU's range
-        sample_start = current_datapoint
-        sample_end = current_datapoint + sample_datapoints
-        
-        if sample_start < end_datapoint and sample_end > start_datapoint:
-            # This sample has datapoints in our GPU's range
-            gpu_samples.append(sample)
-        
-        current_datapoint += sample_datapoints
-        
-        # If we've passed our end range, we can stop
-        if current_datapoint >= end_datapoint:
-            break
+    # Partition the data for this GPU - simple slice by sample index
+    gpu_samples = augmented_data[start_sample:end_sample]
     
     print(f"GPU {args.gpu_id} will process {len(gpu_samples)} samples")
     print(f"Processing {args.batch_size} samples at a time")
@@ -297,10 +279,10 @@ def main():
             'total_samples': len(results),
             'total_datapoints': sum(len(r['nrmse_list']) for r in results),
             'expected_datapoints': gpu_expected_datapoints,
-            'datapoint_range': {
-                'start': start_datapoint,
-                'end': end_datapoint - 1,
-                'count': end_datapoint - start_datapoint
+            'sample_range': {
+                'start': start_sample,
+                'end': end_sample - 1,
+                'count': end_sample - start_sample
             },
             'source_augmented_file': 'augmented_instructions.json',
             'source_groundtruth_file': 'unique_simple_groundtruth.json',
@@ -335,7 +317,7 @@ def main():
     print("="*60)
     
     print(f"GPU ID: {args.gpu_id}")
-    print(f"Datapoint range: {start_datapoint} to {end_datapoint-1} ({end_datapoint - start_datapoint} datapoints)")
+    print(f"Sample range: {start_sample} to {end_sample-1} ({end_sample - start_sample} samples)")
     print(f"Total samples processed: {len(results)}")
     print(f"Total datapoints: {sum(len(r['nrmse_list']) for r in results)}")
     print(f"Original instruction datapoints: {len(all_original_nrmse)}")
