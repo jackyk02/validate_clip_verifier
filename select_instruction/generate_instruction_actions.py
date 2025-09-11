@@ -157,15 +157,11 @@ def process_batch(batch_samples, groundtruth_sample_map):
         for result_idx, (sample_idx, instr_idx) in enumerate(instruction_to_sample_mapping):
             if sample_idx not in sample_results:
                 sample_results[sample_idx] = {
-                    'instructions': [],
                     'generated_actions': [],
-                    'output_ids': [],
                     'instruction_indices': []
                 }
             
-            sample_results[sample_idx]['instructions'].append(all_instructions[result_idx])
             sample_results[sample_idx]['generated_actions'].append(generated_actions[result_idx])
-            sample_results[sample_idx]['output_ids'].append(output_ids[result_idx])
             sample_results[sample_idx]['instruction_indices'].append(instr_idx)
         
         # Process results for each sample
@@ -180,38 +176,21 @@ def process_batch(batch_samples, groundtruth_sample_map):
             sorted_indices = sorted(range(len(sample_result['instruction_indices'])), 
                                   key=lambda i: sample_result['instruction_indices'][i])
             
-            # Calculate NRMSE and create action details
+            # Calculate NRMSE values
             nrmse_list = []
-            action_details = []
             
             for sort_idx in sorted_indices:
-                instruction = sample_result['instructions'][sort_idx]
                 generated_action = sample_result['generated_actions'][sort_idx]
-                output_id = sample_result['output_ids'][sort_idx]
-                instr_idx = sample_result['instruction_indices'][sort_idx]
                 
                 # Calculate NRMSE
                 nrmse = calculate_nrmse(meta['ground_truth_action'], generated_action)
                 nrmse_list.append(float(nrmse))
-                
-                # Store detailed action information
-                action_details.append({
-                    'instruction': instruction,
-                    'is_original': instr_idx == 0,
-                    'generated_action': generated_action.tolist(),
-                    'output_ids': output_id.tolist(),
-                    'nrmse': float(nrmse)
-                })
             
             # Create result entry for this sample
             result_entry = {
                 'sample_id': meta['sample_id'],
                 'original_instruction': meta['original_instruction'],
-                'ground_truth_action': meta['ground_truth_action'].tolist(),
-                'nrmse_list': nrmse_list,  # First is original, rest are rephrases
-                'num_rephrases': len(meta['rephrases']),
-                'action_details': action_details,
-                'image_path': meta['image_path']
+                'nrmse_list': nrmse_list  # First is original, rest are rephrases
             }
             
             batch_results.append(result_entry)
@@ -327,13 +306,7 @@ def main():
             'source_groundtruth_file': 'unique_simple_groundtruth.json',
             'model': 'OpenVLA',
             'temperature': 0,
-            'api_endpoint': 'http://localhost:3200',
             'batch_size': args.batch_size,
-            'nrmse_ranges': {
-                'min_values': min_values.tolist(),
-                'max_values': max_values.tolist(),
-                'ranges': ranges.tolist()
-            },
             'summary_stats': {
                 'original_nrmse': {
                     'mean': float(np.mean(all_original_nrmse)),
@@ -376,7 +349,7 @@ def main():
     for i, result in enumerate(results[:3]):
         print(f"Sample {result['sample_id']}: NRMSE list = {[f'{x:.4f}' for x in result['nrmse_list']]}")
         print(f"  Original: '{result['original_instruction']}'")
-        print(f"  {result['num_rephrases']} rephrases")
+        print(f"  {len(result['nrmse_list']) - 1} rephrases")
 
 if __name__ == "__main__":
     main()
