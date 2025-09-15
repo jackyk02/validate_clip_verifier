@@ -168,7 +168,7 @@ def main():
     parser.add_argument('--batch-size', type=int, default=100,
                         help='Number of samples to process together in a single API call (default: 100)')
     parser.add_argument('--gpu-id', type=int, required=True,
-                        help='GPU ID (0-7) to determine which data partition to process')
+                        help='GPU ID (0-11) to determine which data partition to process')
     args = parser.parse_args()
     
     print("Loading augmented instructions dataset...")
@@ -177,13 +177,12 @@ def main():
     print(f"Found {len(augmented_data)} samples with instructions and rephrases")
     
     # Validate GPU ID
-    if args.gpu_id < 0 or args.gpu_id > 9:
-        raise ValueError("GPU ID must be between 0 and 9")
+    if args.gpu_id < 0 or args.gpu_id > 11:
+        raise ValueError("GPU ID must be between 0 and 11")
     
     # Calculate data partitioning for this GPU
     total_samples = len(augmented_data)
-    num_gpus = 10
-    samples_per_gpu = (total_samples + num_gpus - 1) // num_gpus  # Ceiling division
+    samples_per_gpu = (total_samples + 11) // 12  # Distribute evenly across 12 GPUs
     start_sample = args.gpu_id * samples_per_gpu
     end_sample = min(start_sample + samples_per_gpu, total_samples)
     
